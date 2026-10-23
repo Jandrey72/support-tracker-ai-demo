@@ -79,6 +79,7 @@ de aplicaciones web y despliegue.
 npm install
 cp .env.example .env      # agrega la llave del proveedor de IA que uses
 npm run db:push           # crea la base SQLite
+npm run db:seed           # carga 48 tickets de ejemplo (opcional)
 npm run dashboard         # solo el dashboard en http://localhost:3000
 npm run dev               # bot + dashboard (muestra un QR para vincular WhatsApp)
 ```
@@ -88,4 +89,13 @@ Los clientes y el equipo de ejemplo se configuran en `src/config/companies.ts` y
 
 ## Capturas
 
-<!-- Agregar 3 o 4 capturas del dashboard con los nombres de clientes tapados -->
+*Capturas tomadas con los datos de ejemplo de `prisma/seed.ts`.*
+
+**Dashboard: estadísticas del equipo y por empresa**
+![Dashboard](docs/img/dashboard.jpg)
+
+**Tickets detectados por la IA, con filtros y exportación a Excel, CSV y PDF**
+![Tickets](docs/img/tickets.jpg)
+
+**Evidencia: la conversación de WhatsApp ligada a cada ticket**
+![Evidencia](docs/img/evidencia.jpg)
