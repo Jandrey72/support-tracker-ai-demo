@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Tracker AI — Dashboard</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f1f5f9;
+        color: #0f172a;
+        padding: 24px;
+      }
+      header { margin-bottom: 20px; }
+      h1 { font-size: 24px; color: #1e293b; }
+      .sub { color: #64748b; font-size: 14px; margin-top: 4px; }
+
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+      .card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+      .card.clic { cursor: pointer; transition: transform .12s, box-shadow .12s; user-select: none; }
+      .card.clic:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+      .card.activa { box-shadow: 0 0 0 2px #2563eb, 0 6px 16px rgba(37,99,235,.18); }
+      .card .num { font-size: 30px; font-weight: 700; }
+      .card .label { color: #64748b; font-size: 13px; margin-top: 4px; }
+      .card.total .num { color: #2563eb; }
+      .card.open .num { color: #f59e0b; }
+      .card.progress .num { color: #8b5cf6; }
+      .card.done .num { color: #16a34a; }
+      .card.time .num { color: #0891b2; font-size: 22px; }
+
+      .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+      @media (max-width: 800px) { .panels { grid-template-columns: 1fr; } }
+      .panel { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+      .panel h2 { font-size: 15px; margin-bottom: 14px; color: #334155; }
+
+      .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+      .bar-row .name { width: 110px; color: #475569; text-align: right; }
+      .bar-track { flex: 1; background: #e2e8f0; border-radius: 6px; height: 18px; overflow: hidden; }
+      .bar-fill { background: #2563eb; height: 100%; border-radius: 6px; }
+      .bar-row .cnt { width: 30px; font-weight: 600; }
+
+      .toolbar { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+      .btn { padding: 8px 14px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; }
+      .btn-primary { background: #2563eb; color: #fff; }
+      .btn-ghost { background: #f1f5f9; color: #334155; }
+      .btn-excel { background: #16a34a; color: #fff; text-decoration: none; }
+      .btn-csv { background: #0891b2; color: #fff; text-decoration: none; }
+      .btn-pdf { background: #dc2626; color: #fff; text-decoration: none; }
+      .spacer { flex: 1; }
+
+      table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+      th, td { padding: 11px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+      th { background: #f8fafc; color: #475569; font-weight: 600; }
+      tr:hover td { background: #f8fafc; }
+      .badge { padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+      .b-open { background: #fef3c7; color: #92400e; }
+      .b-progress { background: #ede9fe; color: #5b21b6; }
+      .b-completed { background: #dcfce7; color: #166534; }
+      .empty { text-align: center; color: #94a3b8; padding: 40px; }
+    </style>
+  </head>
+  <body>
+    <header style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="24" fill="#0f172a"/>
+            <circle cx="24" cy="24" r="22" stroke="#2563eb" stroke-width="2" fill="none"/>
+            <text x="24" y="31" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="white">b</text>
+          </svg>
+          <div>
+            <h1 style="font-size:18px;font-weight:900;color:#0f172a;">TIC<span style="color:#2563eb;">GLOBAL</span> <span style="font-weight:400;color:#475569;font-size:15px;">· Support Tracker</span></h1>
+            <div class="sub">Registro de soportes técnicos — <span id="lastUpdate"></span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <button id="botToggle" onclick="toggleBot()" style="padding:6px 14px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;">
+          ⏳ Verificando...
+        </button>
+        <a href="/tecnico.html" style="padding:6px 14px;border-radius:20px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:13px;cursor:pointer;text-decoration:none;">👨‍🔧 Vista por técnico</a>
+        <button onclick="abrirReporte()" style="padding:6px 14px;border-radius:20px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:13px;cursor:pointer;">📄 Reporte mensual</button>
+        <button onclick="logout()" style="padding:6px 14px;border-radius:20px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:13px;cursor:pointer;">🚪 Salir</button>
+      </div>
+    </header>
+    <div style="padding: 0 1rem 1rem;">
+      <button id="btnNuevoTicket" onclick="document.getElementById('modalTicket').style.display='flex'">
+    + Nuevo Ticket
+  </button>
+</div>
+    <div id="errorBanner" style="display:none;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:14px;"></div>
+    <div class="cards" id="cards"></div>
+
+        <div class="panels">
+      <div class="panel">
+        <h2>Estados de soporte</h2>
+        <div style="height: 220px">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Soportes por categoría</h2>
+        <div id="byCategory"></div>
+      </div>
+      <div class="panel">
+        <h2>🏆 Top técnicos</h2>
+        <div id="topTech"></div>
+      </div>
+      <div class="panel">
+        <h2>🏢 Soportes por empresa</h2>
+        <div id="byCompany"></div>
+      </div>
+      <div class="panel">
+        <h2>⚖️ Carga del equipo</h2>
+        <div id="cargaEquipo"></div>
+      </div>
+      <div class="panel">
+        <h2>🔁 Se repite <span id="repetidosRango" style="font-weight:400;color:#94a3b8;font-size:12px;"></span></h2>
+        <div id="repetidos"><div class="empty">Cargando…</div></div>
+      </div>
+    </div>
+        <div class="panel" style="margin-bottom: 20px">
+      <h2>Soportes por día</h2>
+      <div style="height: 260px">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input id="fClient" placeholder="Cliente..." />
+      <input id="fTech" placeholder="Técnico..." />
+      <select id="fStatus">
+        <option value="">Todos los estados</option>
+        <option value="open">Abierto</option>
+        <option value="in_progress">En progreso</option>
+        <option value="completed">Completado</option>
+      </select>
+      <input id="fCategory" placeholder="Categoría..." />
+      <select id="fCompany">
+        <option value="">Todas las empresas</option>
+        <option value="Acme">Acme</option>
+        <option value="CONTPAQ">CONTPAQ</option>
+        <option value="Beta">Logística Beta</option>
+        <option value="Delta">Grupo Delta</option>
+        <option value="Demo">Colegio Demo</option>
+        <option value="Clínica Gamma">Clínica Gamma</option>
+        <option value="Interno">Interno Mi Empresa</option>
+      </select>
+      <input type="date" id="fDateFrom" title="Desde" />
+      <input type="date" id="fDateTo" title="Hasta" />
+      <button class="btn btn-primary" onclick="applyFilters()">Filtrar</button>
+      <button class="btn btn-ghost" onclick="clearFilters()">Limpiar</button>
+      <button class="btn btn-ghost" id="btnPapelera" onclick="togglePapelera()">🗑️ Ver papelera</button>
+      <div class="spacer"></div>
+      <a class="btn btn-excel" id="expExcel">Excel</a>
+      <a class="btn btn-csv" id="expCsv">CSV</a>
+      <a class="btn btn-pdf" id="expPdf">PDF</a>
+      <button class="btn btn-excel" id="expSelXls" onclick="downloadSelected('excel')">☑ Selección → Excel</button>
+      <button class="btn btn-csv" id="expSelCsv" onclick="downloadSelected('csv')">☑ Selección → CSV</button>
+      <button class="btn btn-pdf" id="expSelPdf" onclick="downloadSelected('pdf')">☑ Selección → PDF</button>
+      <button class="btn" id="delSel" style="background:#dc2626;color:#fff" onclick="deleteSelected()">🗑️ Eliminar selección</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:30px"><input type="checkbox" id="chkAll" title="Palomear toda esta página" /></th>
+          <th>#</th><th>Fecha</th><th>Cliente</th><th>Técnico</th><th>Responsable</th><th>Categoría</th>
+          <th>Prioridad</th><th>Estado</th><th>Resumen</th><th>Origen</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="pager" style="display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0">
+      <button id="prevPage" class="btn">◀ Anterior</button>
+      <span id="pageInfo" style="color:#475569;font-size:14px;min-width:190px;text-align:center"></span>
+      <button id="nextPage" class="btn">Siguiente ▶</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script>
+      const STATUS = {
+        open: ['Abierto', 'b-open'],
+        in_progress: ['En progreso', 'b-progress'],
+        completed: ['Completado', 'b-completed'],
+      };
+
+      function fmtDate(iso) {
+        return new Date(iso).toLocaleString('es-MX', {
+          day: '2-digit', month: '2-digit', year: '2-digit',
+          hour: '2-digit', minute: '2-digit',
+        });
+      }
+
+      function query() {
+        const p = new URLSearchParams();
+        const c = document.getElementById('fClient').value.trim();
+        const t = document.getElementById('fTech').value.trim();
+        const s = document.getElementById('fStatus').value;
+        const cat = document.getElementById('fCategory').value.trim();
+        const g = document.getElementById('fCompany').value.trim();
+        const df = document.getElementById('fDateFrom').value;
+        const dt = document.getElementById('fDateTo').value;
+        if (c) p.set('client', c);
+        if (t) p.set('technician', t);
+        if (s) p.set('status', s);
+        if (cat) p.set('category', cat);
+        if (g) p.set('group', g);
+        if (df) p.set('dateFrom', df);
+        if (dt) p.set('dateTo', dt);
+        if (enPapelera) p.set('papelera', '1');
+        return p.toString();
+      }
+
+      /**
+       * Clic en una tarjeta = filtrar la tabla por ese estado.
+       * Volver a picarle a la misma tarjeta quita el filtro (es un interruptor).
+       * Reusa el <select> de la barra de filtros para no tener dos verdades.
+       */
+      function filtrarPorEstado(estado) {
+        const sel = document.getElementById('fStatus');
+        sel.value = sel.value === estado ? '' : estado;
+        currentPage = 1;
+        load();
+        document.querySelector('table').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      function applyFilters() {
+        currentPage = 1;
+        load();
+      }
+
+      function clearFilters() {
+        document.getElementById('fClient').value = '';
+        document.getElementById('fTech').value = '';
+        document.getElementById('fStatus').value = '';
+        document.getElementById('fCategory').value = '';
+        document.getElementById('fCompany').value = '';
+        document.getElementById('fDateFrom').value = '';
+        document.getElementById('fDateTo').value = '';
+        currentPage = 1;
+        load();
+      }
+
+      function updateSelCount() {
+        const n = selected.size;
+        document.getElementById('expSelXls').textContent = n ? '☑ Selección → Excel (' + n + ')' : '☑ Selección → Excel';
+        document.getElementById('expSelCsv').textContent = n ? '☑ Selección → CSV (' + n + ')' : '☑ Selección → CSV';
+        document.getElementById('expSelPdf').textContent = n ? '☑ Selección → PDF (' + n + ')' : '☑ Selección → PDF';
+        document.getElementById('delSel').textContent = n ? '🗑️ Eliminar selección (' + n + ')' : '🗑️ Eliminar selección';
+      }
+
+      function downloadSelected(fmt) {
+        if (!selected.size) { alert('Primero palomea al menos un soporte ☑'); return; }
+        const ids = [...selected].map(encodeURIComponent).join(',');
+        window.location = '/api/export/' + fmt + '?ids=' + ids;
+      }
+
+      /**
+       * Pregunta si además hay que quitar de WhatsApp los avisos que el bot
+       * publicó de ese ticket. Devuelve el pedacito de URL que hay que agregar.
+       *
+       * Se pregunta SIEMPRE y no se hace solo, porque borrar en WhatsApp no
+       * tiene vuelta atrás: aunque recuperes el ticket de la papelera, el
+       * mensaje ya no regresa al grupo.
+       */
+      function preguntarPorWhatsApp() {
+        const si = confirm(
+          '¿Quitar también los avisos de WhatsApp?\n\n' +
+          'Se borrarían el aviso del grupo interno y los privados de asignación ' +
+          'de este ticket.\n\n' +
+          'Aceptar = sí, quitarlos    ·    Cancelar = dejarlos en WhatsApp'
+        );
+        return si ? '?wa=1' : '';
+      }
+
+      /** Cuenta lo que pasó en WhatsApp, con la verdad (a veces no se puede). */
+      function avisarResultadoWhatsApp(r) {
+        if (!r) return;
+        if (r.sinBot) {
+          showError('El ticket se borró, pero los avisos siguen en WhatsApp: el bot no está conectado.');
+        } else if (r.fallidos > 0) {
+          showError(
+            `Se quitaron ${r.borrados} aviso(s) de WhatsApp, pero ${r.fallidos} no se pudieron ` +
+            '(WhatsApp no deja borrar mensajes viejos).'
+          );
+        }
+      }
+
+      async function borrarSoporte(id) {
+        if (!confirm('¿Seguro que quieres ELIMINAR este soporte? Se va a la papelera.')) return;
+        const wa = preguntarPorWhatsApp();
+        const res = await fetch('/api/supports/' + id + wa, { method: 'DELETE' });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          avisarResultadoWhatsApp(data.whatsapp);
+          selected.delete(id);
+          load();
+        } else {
+          alert('No se pudo eliminar. Intenta de nuevo.');
+        }
+      }
+
+      function togglePapelera() {
+        enPapelera = !enPapelera;
+        currentPage = 1;
+        selected.clear();
+        document.getElementById('btnPapelera').textContent = enPapelera ? '← Volver a activos' : '🗑️ Ver papelera';
+        load();
+      }
+
+      async function recuperar(id) {
+        const res = await fetch('/api/supports/' + id + '/recover', { method: 'POST' });
+        if (res.ok) load(); else alert('No se pudo recuperar.');
+      }
+
+      async function borrarParaSiempre(id) {
+        if (!confirm('⚠️ Esto BORRA el soporte PARA SIEMPRE, junto con sus imágenes. ¿Seguro?')) return;
+        const wa = preguntarPorWhatsApp();
+        const res = await fetch('/api/supports/' + id + '/forever' + wa, { method: 'DELETE' });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          avisarResultadoWhatsApp(data.whatsapp);
+          load();
+        } else {
+          alert('No se pudo borrar definitivamente.');
+        }
+      }
+
+      async function deleteSelected() {
+        if (!selected.size) { alert('Primero palomea al menos un soporte ☑'); return; }
+        if (!confirm('¿Eliminar los ' + selected.size + ' soportes seleccionados? No se puede deshacer.')) return;
+        const ids = [...selected];
+        await Promise.all(ids.map((id) => fetch('/api/supports/' + id, { method: 'DELETE' })));
+        selected.clear();
+        updateSelCount();
+        load();
+      }
+
+      /**
+       * Llamada a la API con manejo central de errores.
+       * Si la sesión expiró (401) manda al login en vez de romper la página.
+       */
+      async function api(url, options) {
+        const res = await fetch(url, options);
+        if (res.status === 401) {
+          window.location.replace('/login.html');
+          throw new Error('sesion-expirada');
+        }
+        if (!res.ok) {
+          let msg = 'Error del servidor (' + res.status + ')';
+          try { const d = await res.json(); if (d.error) msg = d.error; } catch {}
+          throw new Error(msg);
+        }
+        return res.json();
+      }
+
+      /** Muestra un aviso rojo arriba de la tabla. */
+      function showError(msg) {
+        const el = document.getElementById('errorBanner');
+        el.textContent = '⚠️ ' + msg;
+        el.style.display = 'block';
+      }
+      function clearError() {
+        document.getElementById('errorBanner').style.display = 'none';
+      }
+
+      let cargando = false;
+      async function load() {
+        if (cargando) return; // evita solapar refrescos
+        cargando = true;
+        const q = query();
+        document.getElementById('expExcel').href = '/api/export/excel?' + q;
+        document.getElementById('expCsv').href = '/api/export/csv?' + q;
+        document.getElementById('expPdf').href = '/api/export/pdf?' + q;
+
+        try {
+          const [stats, supports, estado, tecnicos] = await Promise.all([
+            api('/api/stats?' + q),
+            api('/api/supports?' + q),
+            api('/api/status').catch(() => ({ status: 'disconnected' })),
+            api('/api/tecnicos').catch(() => []),
+          ]);
+
+          // Las tarjetas de estado ignoran el filtro de estado: si no, al picarle
+          // a "Abiertos" las otras se irían a 0 y ya no podrías cambiarte de una
+          // a otra. Los paneles de abajo sí respetan el filtro, como siempre.
+          let statsCards = stats;
+          if (document.getElementById('fStatus').value) {
+            const qCards = new URLSearchParams(q);
+            qCards.delete('status');
+            statsCards = await api('/api/stats?' + qCards.toString()).catch(() => stats);
+          }
+          renderCards(statsCards, supports);
+          renderStatusChart(stats);
+          renderDailyChart(supports);
+          renderCategory(stats.byCategory);
+          renderTech(stats.topTechnicians);
+          renderCompany(stats.byCompany);
+          equipo = tecnicos;
+          renderEquipo(tecnicos);
+          // No frena el resto del dashboard si tarda o falla.
+          api('/api/repetidos').then(renderRepetidos).catch(() => {});
+          allSupports = supports;
+          renderTable();
+          updateBotBtn(estado.status);
+          clearError();
+          document.getElementById('lastUpdate').textContent =
+            'actualizado ' + new Date().toLocaleTimeString('es-MX');
+        } catch (err) {
+          if (err.message !== 'sesion-expirada') showError(err.message);
+        } finally {
+          cargando = false;
+        }
+      }
+            let dailyChart = null;
+      function renderDailyChart(supports) {
+        // 1. Contar soportes por día: {"2026-07-27": 3, "2026-07-28": 5}
+        const conteo = {};
+        supports.forEach((s) => {
+          const dia = new Date(s.createdAt).toISOString().slice(0, 10);
+          conteo[dia] = (conteo[dia] || 0) + 1;
+        });
+
+        // 2. Ordenar los días y separar etiquetas y valores
+        const dias = Object.keys(conteo).sort();
+        const etiquetas = dias.map((k) => k.slice(8, 10) + '/' + k.slice(5, 7));
+        const valores = dias.map((k) => conteo[k]);
+
+        // 3. Dibujar (crear una vez, actualizar después)
+        if (dailyChart) {
+          dailyChart.data.labels = etiquetas;
+          dailyChart.data.datasets[0].data = valores;
+          dailyChart.update();
+          return;
+        }
+        dailyChart = new Chart(document.getElementById('dailyChart'), {
+          type: 'line',
+          data: {
+            labels: etiquetas,
+            datasets: [{
+              label: 'Soportes',
+              data: valores,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, .1)',
+              fill: true,
+              tension: 0.3,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+          },
+        });
+      }
+
+      let statusChart = null;
+      function renderStatusChart(s) {
+        const datos = [s.byStatus.open, s.byStatus.in_progress, s.byStatus.completed];
+        if (statusChart) {
+          statusChart.data.datasets[0].data = datos;
+          statusChart.update();
+          return;
+        }
+        statusChart = new Chart(document.getElementById('statusChart'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Abiertos', 'En progreso', 'Completados'],
+            datasets: [{ data: datos, backgroundColor: ['#f59e0b', '#8b5cf6', '#16a34a'], borderWidth: 0 }],
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+        });
+      }
+
+      function renderCards(s, supports) {
+        const hoy = new Date().toDateString();
+        const soportesHoy = supports.filter(
+          (r) => new Date(r.createdAt).toDateString() === hoy
+        ).length;
+        const t = s.avgResolutionMinutes;
+        const tiempo = t == null ? '—' : t < 60 ? t + ' min' : (t / 60).toFixed(1) + ' h';
+        // La tarjeta del estado que se está filtrando se marca con un aro azul.
+        const activo = document.getElementById('fStatus').value;
+        const act = (e) => (activo === e ? ' activa' : '');
+        document.getElementById('cards').innerHTML = `
+          <div class="card total clic${activo === '' ? ' activa' : ''}" onclick="filtrarPorEstado('')" title="Ver todos">
+            <div class="num">${s.total}</div><div class="label">Total soportes</div></div>
+          <div class="card open clic${act('open')}" onclick="filtrarPorEstado('open')" title="Ver solo los abiertos">
+            <div class="num">${s.byStatus.open}</div><div class="label">Abiertos</div></div>
+          <div class="card progress clic${act('in_progress')}" onclick="filtrarPorEstado('in_progress')" title="Ver solo los que están en progreso">
+            <div class="num">${s.byStatus.in_progress}</div><div class="label">En progreso</div></div>
+          <div class="card done clic${act('completed')}" onclick="filtrarPorEstado('completed')" title="Ver solo los completados">
+            <div class="num">${s.byStatus.completed}</div><div class="label">Completados</div></div>
+          <div class="card"><div class="num">${soportesHoy}</div><div class="label">Soportes hoy</div></div>
+          <div class="card time"><div class="num">${tiempo}</div><div class="label">Tiempo promedio</div></div>`;
+      }
+
+      function renderCategory(cats) {
+        const max = Math.max(1, ...cats.map((c) => c.count));
+        const el = document.getElementById('byCategory');
+        if (!cats.length) { el.innerHTML = '<div class="empty">Sin datos aún</div>'; return; }
+        el.innerHTML = cats.map((c) => `
+          <div class="bar-row">
+            <div class="name">${esc(c.name)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(c.count / max) * 100}%"></div></div>
+            <div class="cnt">${c.count}</div>
+          </div>`).join('');
+      }
+
+      /**
+       * Carga del equipo: cuántos tickets SIN CERRAR trae cada quien.
+       * El reparto automático siempre se lo da al menos cargado, así que
+       * este panel es el termómetro de que está saliendo parejo.
+       */
+      function renderEquipo(tecnicos) {
+        const el = document.getElementById('cargaEquipo');
+        if (!tecnicos || !tecnicos.length) {
+          el.innerHTML = '<div class="empty">Nadie en rotación</div>';
+          return;
+        }
+        const cargas = tecnicos.map((t) => t.abiertos);
+        const max = Math.max(1, ...cargas);
+        const brecha = Math.max(...cargas) - Math.min(...cargas);
+        const aviso = brecha <= 1
+          ? '<span style="color:#16a34a;font-weight:600;">⚖️ Parejo</span>'
+          : `<span style="color:#f59e0b;font-weight:600;">⚠️ Diferencia de ${brecha}</span>`;
+        const nadie = tecnicos.every((t) => t.disponible === false);
+        el.innerHTML = tecnicos.map((t) => `
+          <div class="bar-row">
+            <div class="name" title="${t.disponible === false ? 'Fuera' + (t.motivo ? ': ' + esc(t.motivo) : '') : 'Disponible'}">
+              ${t.disponible === false ? '🚪' : '✅'} ${esc(t.name)}
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(t.abiertos / max) * 100}%;background:${t.disponible === false ? '#94a3b8' : '#0891b2'}"></div></div>
+            <div class="cnt">${t.abiertos}</div>
+            <button onclick="cambiarDisponibilidad('${esc(t.name)}', ${t.disponible === false})"
+              title="${t.disponible === false ? 'Marcar como disponible' : 'Marcar como fuera'}"
+              style="border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:#475569;">
+              ${t.disponible === false ? 'Ya volvió' : 'Salió'}
+            </button>
+          </div>`).join('') +
+          (nadie ? '<div style="margin-top:8px;font-size:11px;color:#b91c1c;">⚠️ Nadie disponible: los soportes nuevos quedan sin asignar.</div>' : '') +
+          '<div style="margin-top:10px;font-size:11px;color:#64748b;display:flex;justify-content:space-between;gap:8px;">' +
+          '<span>Tickets sin cerrar</span>' + aviso + '</div>';
+      }
+
+      /**
+       * Marca a alguien como fuera o de vuelta. Es lo mismo que /ausente y
+       * /disponible en WhatsApp: el aviso sale también en el grupo interno.
+       */
+      async function cambiarDisponibilidad(nombre, disponible) {
+        let motivo = null;
+        if (!disponible) {
+          motivo = prompt('¿A dónde va ' + nombre + '? (opcional)') || null;
+        }
+        try {
+          const res = await fetch('/api/tecnicos/' + encodeURIComponent(nombre) + '/disponibilidad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ disponible, motivo }),
+          });
+          if (!res.ok) throw new Error('fallo');
+          load();
+        } catch {
+          alert('No se pudo cambiar la disponibilidad.');
+        }
+      }
+
+      function renderTech(techs) {
+        const el = document.getElementById('topTech');
+        if (!techs.length) { el.innerHTML = '<div class="empty">Sin datos aún</div>'; return; }
+        const max = Math.max(1, ...techs.map((t) => t.count));
+        el.innerHTML = techs.map((t) => `
+          <div class="bar-row">
+            <div class="name">${esc(t.technician)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(t.count / max) * 100}%;background:#16a34a"></div></div>
+            <div class="cnt">${t.count}</div>
+          </div>`).join('');
+      }
+
+      function renderCompany(companies) {
+        const el = document.getElementById('byCompany');
+        if (!companies.length) { el.innerHTML = '<div class="empty">Sin datos aún</div>'; return; }
+        const max = Math.max(1, ...companies.map((c) => c.count));
+        el.innerHTML = companies.map((c) => `
+          <div class="bar-row">
+            <div class="name">${esc(c.company)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(c.count / max) * 100}%;background:#7c3aed"></div></div>
+            <div class="cnt">${c.count}</div>
+          </div>`).join('');
+      }
+
+      function renderTable() {
+        const tb = document.getElementById('tbody');
+        const rows = allSupports;
+        if (!rows.length) {
+          tb.innerHTML = '<tr><td colspan="9" class="empty">No hay soportes registrados todavía. ¡Manda un mensaje de soporte en tu grupo!</td></tr>';
+          document.getElementById('pageInfo').textContent = '';
+          return;
+        }
+        const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const pageRows = rows.slice(start, start + PAGE_SIZE);
+        document.getElementById('pageInfo').textContent =
+          'Página ' + currentPage + ' de ' + totalPages + '  ·  ' + rows.length + ' soportes';
+        document.getElementById('prevPage').disabled = currentPage === 1;
+        document.getElementById('nextPage').disabled = currentPage === totalPages;
+        const PRIORITY_COLOR = { Alta: '#dc2626', Media: '#f59e0b', Baja: '#16a34a' };
+        const ahora = Date.now();
+        tb.innerHTML = pageRows.map((r) => {
+          const cat = r.category?.name || r.category || '—';
+          const prio = r.severity || 'Media';
+          const prioColor = PRIORITY_COLOR[prio] || '#64748b';
+          const origen = r.source === 'manual'
+            ? '<span style="background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:999px;font-size:11px;">Manual</span>'
+            : '<span style="background:#dcfce7;color:#166534;padding:2px 7px;border-radius:999px;font-size:11px;">WhatsApp</span>';
+          // Responsable = el dueño del ticket. Si nadie lo trae, se avisa: es trabajo sin dueño.
+          const responsable = r.assignedTo
+            ? `<span style="background:#e0f2fe;color:#075985;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;">${esc(r.assignedTo)}</span>`
+            : '<span style="color:#f59e0b;font-size:11px;white-space:nowrap;" title="Este ticket no tiene dueño">⚠️ sin asignar</span>';
+          const horasAbiertas = (ahora - new Date(r.createdAt).getTime()) / 3600000;
+          const slaAlerta = (r.status === 'open' && horasAbiertas > 24) || (r.status === 'in_progress' && horasAbiertas > 48)
+            ? ' <span title="SLA vencido" style="color:#dc2626;font-weight:700;">⚠️</span>' : '';
+          return `<tr>
+            <td><input type="checkbox" class="rowchk" data-id="${r.id}" ${selected.has(r.id) ? 'checked' : ''} /></td>
+            <td style="font-size:11px;color:#64748b;white-space:nowrap;">${r.ticketNumber || '—'}</td>
+            <td>${fmtDate(r.createdAt)}</td>
+            <td>${esc(r.client) || '<i style="color:#94a3b8">—</i>'}</td>
+            <td>${esc(r.technician) || '<i style="color:#94a3b8">—</i>'}</td>
+            <td>${responsable}</td>
+            <td>${esc(cat)}</td>
+            <td><span style="color:${prioColor};font-weight:600;font-size:12px;">● ${prio}</span></td>
+            <td>
+              <select class="status-sel" data-id="${r.id}" style="padding:3px 6px;border-radius:6px;border:1px solid #cbd5e1;font-size:12px;cursor:pointer;">
+                <option value="open" ${r.status==='open'?'selected':''}>Abierto</option>
+                <option value="in_progress" ${r.status==='in_progress'?'selected':''}>En progreso</option>
+                <option value="completed" ${r.status==='completed'?'selected':''}>Completado</option>
+              </select>${slaAlerta}
+            </td>
+            <td>${esc(r.summary) || ''}</td>
+            <td>${origen}</td>
+            <td style="display:flex;gap:4px;flex-wrap:wrap;">
+              ${enPapelera
+                ? `<button class="btn" style="background:#16a34a;color:#fff;padding:2px 8px" onclick="recuperar('${r.id}')">♻️</button>
+                   <button class="btn" style="background:#7f1d1d;color:#fff;padding:2px 8px" onclick="borrarParaSiempre('${r.id}')">💥</button>`
+                : `<button class="btn" style="background:#2563eb;color:#fff;padding:2px 8px" onclick="abrirEditar('${r.id}')">✏️</button>
+                   <button class="btn" style="background:#7c3aed;color:#fff;padding:2px 8px" title="Ver evidencia" onclick="verEvidencia('${r.id}')">📎</button>
+                   <button class="btn" style="background:#dc2626;color:#fff;padding:2px 8px" onclick="borrarSoporte('${r.id}')">🗑️</button>`}
+            </td>
+          </tr>`;
+        }).join('');
+      }
+
+      function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+      }
+
+      /** Equipo en rotación con su carga. Se refresca en cada load(). */
+      let equipo = [];
+
+      let allSupports = [];
+      let currentPage = 1;
+      const PAGE_SIZE = 20;
+      const selected = new Set();
+      let enPapelera = false;
+      document.getElementById('prevPage').addEventListener('click', () => { currentPage--; renderTable(); });
+      document.getElementById('nextPage').addEventListener('click', () => { currentPage++; renderTable(); });
+      document.getElementById('tbody').addEventListener('change', (e) => {
+        if (!e.target.classList || !e.target.classList.contains('rowchk')) return;
+        const id = e.target.getAttribute('data-id');
+        if (e.target.checked) selected.add(id); else selected.delete(id);
+        updateSelCount();
+      });
+      document.getElementById('chkAll').addEventListener('change', (e) => {
+        document.querySelectorAll('#tbody .rowchk').forEach((cb) => {
+          cb.checked = e.target.checked;
+          const id = cb.getAttribute('data-id');
+          if (e.target.checked) selected.add(id); else selected.delete(id);
+        });
+        updateSelCount();
+      });
+
+      // ---- Subir capturas: pegar, arrastrar o escoger ----
+      // El listener de pegar va en `document` porque el modal todavía no existe
+      // cuando este script corre (está más abajo en el HTML).
+      document.addEventListener('paste', (e) => {
+        const modal = document.getElementById('modalEvidencia');
+        if (!modal || modal.style.display !== 'flex') return; // solo con el modal abierto
+        const files = [...(e.clipboardData?.items ?? [])]
+          .filter((i) => i.kind === 'file' && i.type.startsWith('image/'))
+          .map((i) => i.getAsFile())
+          .filter(Boolean);
+        if (files.length) {
+          e.preventDefault();
+          subirCapturas(files);
+        }
+      });
+
+      // Arrastrar y soltar + el botón de escoger archivo. Se enganchan cuando el
+      // HTML ya está completo, si no `ev_drop` todavía no existe.
+      document.addEventListener('DOMContentLoaded', () => {
+        const dz = document.getElementById('ev_drop');
+        const input = document.getElementById('ev_file');
+        if (!dz || !input) return;
+
+        const pintar = (activo) => {
+          dz.style.background = activo ? '#eef2ff' : '#fff';
+          dz.style.borderColor = activo ? '#2563eb' : '#cbd5e1';
+        };
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); pintar(true); });
+        dz.addEventListener('dragleave', () => pintar(false));
+        dz.addEventListener('drop', (e) => {
+          e.preventDefault();
+          pintar(false);
+          subirCapturas(e.dataTransfer?.files ?? []);
+        });
+
+        input.addEventListener('change', () => {
+          subirCapturas(input.files ?? []);
+          input.value = ''; // para poder subir dos veces el mismo archivo
+        });
+      });
+
+      load();
+      // Refresco automático cada 20s, pero SOLO si la pestaña está visible
+      // (no tiene sentido consultar la base con la ventana en segundo plano).
+      setInterval(() => {
+        if (!document.hidden) load();
+      }, 20000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) load();
+      });
+
+      // Cambio de estado desde el dropdown de la tabla
+      document.getElementById('tbody').addEventListener('change', async (e) => {
+        const sel = e.target.closest('.status-sel');
+        if (!sel) return;
+        const id = sel.dataset.id;
+        await fetch(`/api/supports/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: sel.value }),
+        });
+        load();
+      });
+
+      // Abrir modal de edición con datos pre-cargados
+      function abrirEditar(id) {
+        const r = allSupports.find(s => s.id === id);
+        if (!r) return;
+        document.getElementById('ed_id').value = id;
+        document.getElementById('ed_num').textContent = r.ticketNumber ? `· ${r.ticketNumber}` : '';
+        document.getElementById('ed_client').value = r.client || '';
+        document.getElementById('ed_tech').value = r.technician || '';
+        document.getElementById('ed_category').value = r.category?.name || r.category || '';
+        document.getElementById('ed_severity').value = r.severity || 'Media';
+        document.getElementById('ed_summary').value = r.summary || '';
+        document.getElementById('ed_status').value = r.status || 'open';
+        llenarResponsables(r.assignedTo);
+        document.getElementById('ed_resolution').value = r.resolutionNote || '';
+        document.getElementById('ed_comment_input').value = '';
+        document.getElementById('modalEditar').style.display = 'flex';
+        cargarComentarios(id);
+        cargarParecidos(id);
+        pintarLinkPublico(r);
+      }
+
+      // ============================================================
+      //  "ESTO YA PASÓ ANTES" (idea #5)
+      //  Tickets cerrados parecidos, para ver cómo se resolvió antes.
+      // ============================================================
+      async function cargarParecidos(id) {
+        const el = document.getElementById('ed_parecidos');
+        el.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Buscando…</div>';
+        try {
+          const lista = await api(`/api/supports/${id}/parecidos`);
+          if (!lista.length) {
+            el.innerHTML = '<div style="color:#94a3b8;font-size:12px;">No hay tickets cerrados parecidos.</div>';
+            return;
+          }
+          el.innerHTML = lista.map((p) => `
+            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;">
+              <div style="display:flex;justify-content:space-between;gap:8px;">
+                <b>${esc(p.ticketNumber || 's/n')} · ${esc(p.empresa)}</b>
+                <span style="color:#64748b;">${Math.round(p.puntaje * 100)}% parecido</span>
+              </div>
+              <div style="color:#334155;margin-top:2px;">${esc(p.summary)}</div>
+              ${p.resolutionNote
+                ? `<div style="color:#166534;margin-top:4px;">🔧 ${esc(p.resolutionNote)}</div>`
+                : '<div style="color:#94a3b8;margin-top:4px;">Sin nota de resolución — llénala al cerrar para que sirva la próxima vez.</div>'}
+              <div style="color:#94a3b8;margin-top:3px;">En común: ${p.enComun.map(esc).join(', ')}</div>
+            </div>`).join('');
+        } catch (e) {
+          el.innerHTML = `<div style="color:#b91c1c;font-size:12px;">${esc(e.message)}</div>`;
+        }
+      }
+
+      // ============================================================
+      //  LINK PÚBLICO PARA EL CLIENTE (idea #7)
+      //  Se crea a mano, se copia y se manda TÚ al cliente. El bot nunca
+      //  lo publica solo en su grupo (regla de oro).
+      // ============================================================
+      function pintarLinkPublico(r) {
+        const el = document.getElementById('ed_link');
+        if (!r.publicToken) {
+          el.innerHTML = `<button onclick="crearLinkPublico('${r.id}')" style="padding:.5rem 1rem;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;cursor:pointer;font-size:13px;">🔗 Crear link para el cliente</button>`;
+          return;
+        }
+        const url = `${location.origin}/estado/${r.publicToken}`;
+        el.innerHTML = `
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input readonly value="${esc(url)}" onclick="this.select()" style="flex:1;padding:.45rem .6rem;border-radius:8px;border:1px solid #cbd5e1;font-size:12px;color:#0f172a;background:#f8fafc;">
+            <button onclick="copiarLink('${esc(url)}', this)" style="padding:.45rem .8rem;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px;">Copiar</button>
+            <a href="${esc(url)}" target="_blank" rel="noopener" style="padding:.45rem .8rem;border-radius:8px;background:#f1f5f9;color:#334155;font-size:12px;text-decoration:none;">Ver</a>
+            <button onclick="revocarLinkPublico('${r.id}')" title="El link deja de funcionar" style="padding:.45rem .8rem;border:none;border-radius:8px;background:#fee2e2;color:#b91c1c;cursor:pointer;font-size:12px;">Quitar</button>
+          </div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px;">Solo muestra estado, resumen y solución. Ojo: el cliente solo lo abre si puede llegar a este servidor.</div>`;
+      }
+
+      async function crearLinkPublico(id) {
+        try {
+          const { codigo } = await api(`/api/supports/${id}/link-publico`, { method: 'POST' });
+          const r = allSupports.find((s) => s.id === id);
+          if (r) { r.publicToken = codigo; pintarLinkPublico(r); }
+        } catch (e) { alert('No se pudo crear el link: ' + e.message); }
+      }
+
+      async function revocarLinkPublico(id) {
+        if (!confirm('¿Quitar el link? Quien lo tenga ya no podrá ver el ticket.')) return;
+        try {
+          await api(`/api/supports/${id}/link-publico`, { method: 'DELETE' });
+          const r = allSupports.find((s) => s.id === id);
+          if (r) { r.publicToken = null; pintarLinkPublico(r); }
+        } catch (e) { alert('No se pudo quitar el link: ' + e.message); }
+      }
+
+      async function copiarLink(url, btn) {
+        try { await navigator.clipboard.writeText(url); btn.textContent = '¡Copiado!'; }
+        catch { btn.textContent = 'Cópialo a mano'; }
+        setTimeout(() => (btn.textContent = 'Copiar'), 1800);
+      }
+
+      // ============================================================
+      //  PROBLEMAS REPETIDOS (idea #3)
+      // ============================================================
+      function renderRepetidos(data) {
+        const el = document.getElementById('repetidos');
+        document.getElementById('repetidosRango').textContent =
+          `(${data.minimo}+ en ${data.dias} días)`;
+        if (!data.lista.length) {
+          el.innerHTML = '<div class="empty">✅ Ningún cliente repite el mismo problema</div>';
+          return;
+        }
+        const max = Math.max(...data.lista.map((p) => p.total));
+        el.innerHTML = data.lista.slice(0, 6).map((p) => `
+          <div class="bar-row" title="Tickets: ${esc(p.tickets.slice(0, 8).join(', '))}">
+            <div class="name" style="width:150px;">${esc(p.empresa)}<br><span style="font-size:11px;color:#94a3b8;">${esc(p.categoria)}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(p.total / max) * 100}%;background:#f97316"></div></div>
+            <div class="cnt">${p.total}</div>
+          </div>`).join('') +
+          '<div style="margin-top:8px;font-size:11px;color:#64748b;">Si se repite, hay algo de fondo que proponerle al cliente.</div>';
+      }
+
+      // ============================================================
+      //  REPORTE MENSUAL (idea #1)
+      // ============================================================
+      async function abrirReporte() {
+        const sel = document.getElementById('rep_empresa');
+        if (!sel.options.length) {
+          try {
+            const empresas = await api('/api/reporte-mensual/empresas');
+            sel.innerHTML = empresas.map((e) => `<option>${esc(e)}</option>`).join('');
+          } catch (e) { alert(e.message); return; }
+        }
+        // Por defecto, el mes pasado (el que se le entrega al cliente).
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - 1);
+        const mes = document.getElementById('rep_mes');
+        if (!mes.value) mes.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        document.getElementById('modalReporte').style.display = 'flex';
+      }
+
+      function descargarReporte() {
+        const empresa = document.getElementById('rep_empresa').value;
+        const mes = document.getElementById('rep_mes').value;
+        if (!empresa || !mes) return;
+        window.location.href = `/api/reporte-mensual?empresa=${encodeURIComponent(empresa)}&mes=${encodeURIComponent(mes)}`;
+      }
+
+      // ============================================================
+      //  EVIDENCIA DEL TICKET
+      //  Muestra la conversacion de WhatsApp que origino el soporte.
+      //  Es la prueba que justifica el cobro ante el cliente.
+      //  (Las capturas adjuntas se agregan en el paso 2, en #ev_archivos)
+      // ============================================================
+      function verEvidencia(id) {
+        const r = allSupports.find((s) => s.id === id);
+        document.getElementById('ev_num').textContent = r?.ticketNumber || '';
+        document.getElementById('ev_cliente').textContent = r?.client || 'Sin cliente';
+        document.getElementById('ev_mensajes').innerHTML =
+          '<div style="color:#94a3b8;font-size:13px;padding:1rem;text-align:center;">Cargando conversación…</div>';
+        document.getElementById('ev_archivos').innerHTML = '';
+        document.getElementById('modalEvidencia').style.display = 'flex';
+        evidenciaTicketId = id;
+        cargarEvidencia(id);
+        cargarArchivos(id);
+      }
+
+      /** Ticket cuyo modal de evidencia está abierto (para saber a quién subirle). */
+      let evidenciaTicketId = null;
+
+      function cerrarEvidencia() {
+        evidenciaTicketId = null;
+        document.getElementById('modalEvidencia').style.display = 'none';
+        // Limpiamos para que al abrir otro ticket no se vea el anterior.
+        document.getElementById('ev_mensajes').innerHTML = '';
+        document.getElementById('ev_archivos').innerHTML = '';
+      }
+
+      async function cargarEvidencia(id) {
+        const el = document.getElementById('ev_mensajes');
+        try {
+          const msgs = await api(`/api/supports/${id}/messages`);
+          if (!msgs.length) {
+            el.innerHTML =
+              '<div style="text-align:center;padding:2rem 1rem;color:#94a3b8;">' +
+              '<div style="font-size:32px;margin-bottom:.5rem;">💬</div>' +
+              '<div style="font-size:14px;color:#64748b;font-weight:600;">Sin conversación de WhatsApp</div>' +
+              '<div style="font-size:12px;margin-top:.3rem;">Este ticket se registró a mano. Aquí podrás adjuntar capturas de pantalla.</div>' +
+              '</div>';
+            return;
+          }
+          el.innerHTML = msgs.map(burbuja).join('');
+          el.scrollTop = 0;
+        } catch (err) {
+          if (err.message === 'sesion-expirada') return;
+          el.innerHTML =
+            '<div style="color:#dc2626;font-size:13px;padding:1rem;">⚠️ ' + esc(err.message) + '</div>';
+        }
+      }
+
+      /** Pinta las capturas que se subieron a mano. */
+      async function cargarArchivos(id) {
+        const el = document.getElementById('ev_archivos');
+        try {
+          const archivos = await api(`/api/supports/${id}/evidencia`);
+          if (!archivos.length) {
+            el.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Todavía no hay capturas.</div>';
+            return;
+          }
+          el.innerHTML =
+            '<div style="display:flex;flex-wrap:wrap;gap:10px;">' +
+            archivos.map((a) => `
+              <div style="position:relative;width:110px;">
+                <img src="/api/evidencia/archivo/${esc(a.id)}" alt="${esc(a.fileName)}" loading="lazy"
+                     onclick="window.open('/api/evidencia/archivo/${esc(a.id)}','_blank')"
+                     style="width:110px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;cursor:zoom-in;display:block;">
+                <button onclick="borrarCaptura('${esc(a.id)}')" title="Quitar esta captura"
+                        style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:#dc2626;color:#fff;cursor:pointer;font-size:12px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.3);">✕</button>
+                <div style="font-size:10px;color:#64748b;margin-top:3px;word-break:break-all;line-height:1.2;">${esc(a.fileName)}</div>
+              </div>`).join('') +
+            '</div>';
+        } catch (err) {
+          if (err.message === 'sesion-expirada') return;
+          el.innerHTML = '<div style="color:#dc2626;font-size:12px;">⚠️ ' + esc(err.message) + '</div>';
+        }
+      }
+
+      /**
+       * Sube una o varias imágenes al ticket abierto.
+       * Manda los BYTES tal cual (no base64): pesa menos y no hay que subirle
+       * el límite al parser de JSON del servidor.
+       */
+      async function subirCapturas(files) {
+        const id = evidenciaTicketId;
+        if (!id || !files.length) return;
+
+        const imagenes = [...files].filter((f) => f.type.startsWith('image/'));
+        if (!imagenes.length) {
+          showError('Solo se pueden subir imágenes.');
+          return;
+        }
+
+        const aviso = document.getElementById('ev_subiendo');
+        aviso.style.display = 'block';
+        try {
+          for (const f of imagenes) {
+            const res = await fetch(`/api/supports/${id}/evidencia`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': f.type,
+                // Codificado porque una cabecera HTTP no admite acentos ni emojis.
+                'X-File-Name': encodeURIComponent(f.name || 'captura.png'),
+              },
+              body: f,
+            });
+            if (!res.ok) {
+              let msg = 'No se pudo subir ' + (f.name || 'la captura');
+              try { const d = await res.json(); if (d.error) msg = d.error; } catch {}
+              showError(msg);
+            }
+          }
+          clearError();
+          await cargarArchivos(id);
+        } finally {
+          aviso.style.display = 'none';
+        }
+      }
+
+      async function borrarCaptura(evidenciaId) {
+        const id = evidenciaTicketId;
+        if (!id) return;
+        if (!confirm('¿Quitar esta captura del ticket? Se borra el archivo.')) return;
+        try {
+          await api(`/api/supports/${id}/evidencia/${evidenciaId}`, { method: 'DELETE' });
+          await cargarArchivos(id);
+        } catch (err) {
+          if (err.message !== 'sesion-expirada') showError(err.message);
+        }
+      }
+
+      /** Una burbuja de chat: el equipo a la derecha (verde), el cliente a la izquierda. */
+      function burbuja(m) {
+        const mio = !!m.esTecnico;
+        const fondo = mio ? '#dcf8c6' : '#ffffff';
+        const align = mio ? 'flex-end' : 'flex-start';
+        const iconos = { image: '🖼️', video: '🎥', audio: '🎤', document: '📄' };
+        const icono = iconos[m.type] ? iconos[m.type] + ' ' : '';
+        const quien = esc(m.sender) || 'Desconocido';
+        // La foto que mandó el cliente. Se pide al endpoint con sesión, no a
+        // una carpeta pública: la evidencia de un cliente no anda suelta.
+        let foto = '';
+        if (m.type === 'image' && m.mediaUrl) {
+          foto = `<img src="/api/evidencia/mensaje/${esc(m.id)}" alt="Evidencia" loading="lazy"
+                    onclick="window.open('/api/evidencia/mensaje/${esc(m.id)}','_blank')"
+                    style="max-width:100%;border-radius:8px;margin-top:6px;cursor:zoom-in;display:block;">`;
+        } else if (m.type === 'image') {
+          // Mensajes viejos: WhatsApp ya no deja recuperar el archivo.
+          foto = '<div style="margin-top:4px;font-size:11px;color:#94a3b8;font-style:italic;">La imagen no se conservó</div>';
+        }
+        return `
+          <div style="display:flex;justify-content:${align};margin-bottom:8px;">
+            <div style="max-width:78%;background:${fondo};border-radius:10px;padding:8px 10px;font-size:13px;box-shadow:0 1px 2px rgba(0,0,0,.08);">
+              <div style="font-weight:600;font-size:11px;margin-bottom:3px;color:${mio ? '#166534' : '#2563eb'};">
+                ${quien}${mio ? ' · Mi Empresa' : ''}
+              </div>
+              <div style="color:#0f172a;white-space:pre-wrap;word-break:break-word;">${icono}${esc(m.content)}</div>
+              ${foto}
+              <div style="color:#94a3b8;font-size:10px;text-align:right;margin-top:4px;">${fmtDate(m.timestamp)}</div>
+            </div>
+          </div>`;
+      }
+
+      /** Llena el <select> de responsable con el equipo en rotación. */
+      function llenarResponsables(actual) {
+        const sel = document.getElementById('ed_assigned');
+        const nombres = equipo.map((t) => t.name);
+        // Si el ticket trae a alguien que ya salió de la rotación (ej. Carlos),
+        // lo agregamos igual para no borrarlo sin querer al guardar.
+        if (actual && !nombres.includes(actual)) nombres.push(actual);
+        sel.innerHTML =
+          '<option value="">— Sin asignar —</option>' +
+          nombres.map((n) => {
+            const t = equipo.find((x) => x.name === n);
+            const carga = t ? ` (${t.abiertos} abiertos)` : ' (fuera de rotación)';
+            return `<option value="${esc(n)}">${esc(n)}${carga}</option>`;
+          }).join('');
+        sel.value = actual || '';
+      }
+
+      async function guardarEdicion() {
+        const id = document.getElementById('ed_id').value;
+        const body = {
+          client: document.getElementById('ed_client').value,
+          technician: document.getElementById('ed_tech').value,
+          categoryName: document.getElementById('ed_category').value,
+          severity: document.getElementById('ed_severity').value,
+          summary: document.getElementById('ed_summary').value,
+          status: document.getElementById('ed_status').value,
+          resolutionNote: document.getElementById('ed_resolution').value,
+          assignedTo: document.getElementById('ed_assigned').value,
+        };
+        const res = await fetch(`/api/supports/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          document.getElementById('modalEditar').style.display = 'none';
+          load();
+        } else {
+          alert('Error al guardar cambios');
+        }
+      }
+
+      // ---- Bot toggle ----
+      let botConnected = false;
+      function updateBotBtn(status) {
+        botConnected = status === 'connected';
+        const btn = document.getElementById('botToggle');
+        if (status === 'connected') {
+          btn.textContent = '🟢 Bot activo';
+          btn.style.background = '#dcfce7';
+          btn.style.color = '#166534';
+          btn.style.border = 'none';
+          btn.title = 'Clic para apagar el bot';
+        } else if (status === 'conflict') {
+          btn.textContent = '⚠️ Conflicto de sesión';
+          btn.style.background = '#fef3c7';
+          btn.style.color = '#92400e';
+          btn.style.border = '1px solid #f59e0b';
+          btn.title = 'Hay otra sesión activa. Cierra WhatsApp Web y da clic para reconectar.';
+        } else {
+          btn.textContent = '🔴 Bot inactivo';
+          btn.style.background = '#fee2e2';
+          btn.style.color = '#dc2626';
+          btn.style.border = 'none';
+          btn.title = 'Clic para encender el bot';
+        }
+      }
+
+      async function toggleBot() {
+        const btn = document.getElementById('botToggle');
+        const isConflict = btn.textContent.includes('Conflicto');
+        const action = (botConnected && !isConflict) ? 'stop' : 'start';
+        const label = (botConnected && !isConflict) ? 'apagar' : 'encender/reconectar';
+        if (isConflict) {
+          alert('Primero cierra WhatsApp Web en el navegador, luego da clic en "Bot inactivo" para reconectar.');
+          return;
+        }
+        if (!confirm(`¿Seguro que quieres ${label} el bot de WhatsApp?`)) return;
+
+        btn.textContent = '⏳ Procesando...';
+        btn.disabled = true;
+        try {
+          await api(`/api/bot/${action}`, { method: 'POST' });
+          // Damos unos segundos a que WhatsApp conecte/desconecte de verdad.
+          await new Promise((r) => setTimeout(r, 2500));
+          const estado = await api('/api/status');
+          updateBotBtn(estado.status);
+        } catch (err) {
+          if (err.message !== 'sesion-expirada') showError(err.message);
+          updateBotBtn('disconnected');
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      async function logout() {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      }
+
+      // ---- Comentarios ----
+      async function cargarComentarios(id) {
+        const res = await fetch(`/api/supports/${id}/comments`);
+        const comments = await res.json();
+        const el = document.getElementById('ed_comments_list');
+        if (!comments.length) {
+          el.innerHTML = '<div style="color:#94a3b8;font-size:13px;">Sin notas todavía.</div>';
+          return;
+        }
+        el.innerHTML = comments.map(c => `
+          <div style="background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:13px;display:flex;gap:8px;align-items:flex-start;">
+            <div style="flex:1;">
+              ${c.author ? `<strong style="color:#334155;">${esc(c.author)}</strong> — ` : ''}
+              <span style="color:#0f172a;">${esc(c.content)}</span>
+              <div style="color:#94a3b8;font-size:11px;margin-top:2px;">${fmtDate(c.createdAt)}</div>
+            </div>
+            <button onclick="borrarComentario('${id}','${c.id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:0;" title="Borrar">✕</button>
+          </div>`).join('');
+      }
+
+      async function agregarComentario() {
+        const id = document.getElementById('ed_id').value;
+        const content = document.getElementById('ed_comment_input').value.trim();
+        const author = document.getElementById('ed_comment_author').value.trim();
+        if (!content) return;
+        await fetch(`/api/supports/${id}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, author: author || undefined }),
+        });
+        document.getElementById('ed_comment_input').value = '';
+        cargarComentarios(id);
+      }
+
+      async function borrarComentario(ticketId, commentId) {
+        await fetch(`/api/supports/${ticketId}/comments/${commentId}`, { method: 'DELETE' });
+        cargarComentarios(ticketId);
+      }
+
+      async function crearTicket() {
+        const summary = document.getElementById('tk_summary').value.trim();
+        if (!summary) { alert('El resumen es obligatorio'); return; }
+
+        const body = {
+          summary,
+          client: document.getElementById('tk_client').value.trim() || undefined,
+          technician: document.getElementById('tk_tech').value.trim() || undefined,
+          categoryName: document.getElementById('tk_category').value.trim() || undefined,
+          severity: document.getElementById('tk_severity').value,
+          status: 'open',
+        };
+
+        const res = await fetch('/api/supports', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (res.ok) {
+          document.getElementById('modalTicket').style.display = 'none';
+          document.getElementById('tk_client').value = '';
+          document.getElementById('tk_tech').value = '';
+          document.getElementById('tk_category').value = '';
+          document.getElementById('tk_severity').value = 'Media';
+          document.getElementById('tk_summary').value = '';
+          load();
+        } else {
+          alert('Error al guardar el ticket');
+        }
+      }
+    </script>
+    <div id="modalEditar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;padding:2rem;border-radius:16px;width:90%;max-width:560px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:1rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h2 style="margin:0;color:#1e293b;font-size:20px;">✏️ Editar Ticket <span id="ed_num" style="font-size:14px;color:#64748b;font-weight:400;"></span></h2>
+    <input type="hidden" id="ed_id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+      <input id="ed_client" placeholder="Cliente / Empresa" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;">
+      <input id="ed_tech" placeholder="Técnico asignado" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;">
+      <input id="ed_category" placeholder="Categoría" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;">
+      <select id="ed_severity" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;">
+        <option value="Alta">🔴 Alta</option>
+        <option value="Media" selected>🟡 Media</option>
+        <option value="Baja">🟢 Baja</option>
+      </select>
+      <select id="ed_status" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;grid-column:span 2;">
+        <option value="open">Abierto</option>
+        <option value="in_progress">En progreso</option>
+        <option value="completed">✅ Completado</option>
+      </select>
+    </div>
+    <div>
+      <label for="ed_assigned" style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;">👤 Responsable del ticket</label>
+      <select id="ed_assigned" style="width:100%;padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;background:#fff;"></select>
+    </div>
+    <textarea id="ed_summary" placeholder="Descripción del problema" rows="2" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;resize:vertical;font-family:inherit;"></textarea>
+    <textarea id="ed_resolution" placeholder="Nota de resolución (¿qué se hizo para resolverlo?)" rows="2" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;resize:vertical;font-family:inherit;"></textarea>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:.2rem 0;">
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;">💬 Notas internas</div>
+      <div id="ed_comments_list" style="max-height:120px;overflow-y:auto;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:6px;">
+        <input id="ed_comment_author" placeholder="Tu nombre" style="width:120px;padding:.5rem .7rem;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;color:#0f172a;" />
+        <input id="ed_comment_input" placeholder="Agregar nota..." style="flex:1;padding:.5rem .7rem;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;color:#0f172a;"
+          onkeydown="if(event.key==='Enter')agregarComentario()" />
+        <button onclick="agregarComentario()" style="padding:.5rem 1rem;border:none;border-radius:8px;background:#0891b2;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">+</button>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;">💡 Esto ya pasó antes</div>
+      <div id="ed_parecidos" style="max-height:180px;overflow-y:auto;"></div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;">🌐 Página de estado para el cliente</div>
+      <div id="ed_link"></div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+      <button onclick="document.getElementById('modalEditar').style.display='none'" style="padding:.6rem 1.2rem;border:1px solid #cbd5e1;border-radius:8px;background:#f1f5f9;color:#334155;cursor:pointer;font-size:14px;">Cancelar</button>
+      <button onclick="guardarEdicion()" style="padding:.6rem 1.4rem;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:14px;font-weight:600;">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+    <div id="modalReporte" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;padding:2rem;border-radius:16px;width:90%;max-width:420px;display:flex;flex-direction:column;gap:1rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h2 style="margin:0;color:#1e293b;font-size:20px;">📄 Reporte mensual</h2>
+    <div style="font-size:13px;color:#64748b;">El PDF con el formato de "Reporte de Actividades" para entregarle al cliente. El día 1 de cada mes llega solo al grupo interno.</div>
+    <label style="font-size:13px;font-weight:600;color:#334155;">Cliente
+      <select id="rep_empresa" style="width:100%;margin-top:4px;padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;background:#fff;"></select>
+    </label>
+    <label style="font-size:13px;font-weight:600;color:#334155;">Mes
+      <input type="month" id="rep_mes" style="width:100%;margin-top:4px;padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;">
+    </label>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+      <button onclick="document.getElementById('modalReporte').style.display='none'" style="padding:.6rem 1.2rem;border:1px solid #cbd5e1;border-radius:8px;background:#f1f5f9;color:#334155;cursor:pointer;font-size:14px;">Cerrar</button>
+      <button onclick="descargarReporte()" style="padding:.6rem 1.4rem;border:none;border-radius:8px;background:#dc2626;color:#fff;cursor:pointer;font-size:14px;font-weight:600;">⬇️ Descargar PDF</button>
+    </div>
+  </div>
+</div>
+
+    <div id="modalTicket" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;padding:2rem;border-radius:16px;width:90%;max-width:500px;display:flex;flex-direction:column;gap:1rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h2 style="margin:0;color:#1e293b;font-size:20px;">🎫 Nuevo Ticket</h2>
+    <input id="tk_client" placeholder="Cliente / Empresa" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;outline:none;">
+    <input id="tk_tech" placeholder="Técnico asignado" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;outline:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+      <input id="tk_category" placeholder="Categoría (ej: Redes)" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;outline:none;">
+      <select id="tk_severity" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;">
+        <option value="Alta">🔴 Alta</option>
+        <option value="Media" selected>🟡 Media</option>
+        <option value="Baja">🟢 Baja</option>
+      </select>
+    </div>
+    <textarea id="tk_summary" placeholder="Descripción del problema *" rows="4" style="padding:.7rem 1rem;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;color:#0f172a;resize:vertical;outline:none;font-family:inherit;"></textarea>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+      <button onclick="document.getElementById('modalTicket').style.display='none'" style="padding:.6rem 1.2rem;border:1px solid #cbd5e1;border-radius:8px;background:#f1f5f9;color:#334155;cursor:pointer;font-size:14px;">Cancelar</button>
+      <button onclick="crearTicket()" style="padding:.6rem 1.4rem;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:14px;font-weight:600;">Guardar Ticket</button>
+    </div>
+  </div>
+</div>
+
+    <!-- ===== Modal: EVIDENCIA del ticket (conversacion + capturas) ===== -->
+    <div id="modalEvidencia" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;width:92%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;">
+
+        <div style="padding:1.2rem 1.5rem;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:.6rem;">
+          <h2 style="margin:0;color:#1e293b;font-size:19px;">📎 Evidencia</h2>
+          <span id="ev_num" style="background:#ede9fe;color:#6d28d9;font-weight:700;font-size:13px;padding:3px 10px;border-radius:999px;"></span>
+          <span id="ev_cliente" style="color:#64748b;font-size:13px;margin-left:auto;"></span>
+        </div>
+
+        <div style="padding:1rem 1.2rem;overflow-y:auto;background:#f8fafc;flex:1;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;font-weight:700;margin-bottom:.6rem;">
+            Conversación de WhatsApp
+          </div>
+          <div id="ev_mensajes"></div>
+
+          <div style="margin-top:1.2rem;border-top:1px solid #e2e8f0;padding-top:1rem;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;font-weight:700;margin-bottom:.6rem;">
+              Capturas adjuntas
+            </div>
+            <div id="ev_archivos"></div>
+            <div id="ev_drop" style="margin-top:.6rem;border:2px dashed #cbd5e1;border-radius:10px;padding:1rem;text-align:center;color:#64748b;font-size:13px;background:#fff;transition:background .15s,border-color .15s;">
+              📋 Pega una captura con <strong>⌘V</strong>, arrástrala aquí, o
+              <label style="color:#2563eb;cursor:pointer;text-decoration:underline;">
+                escógela<input type="file" id="ev_file" accept="image/*" multiple style="display:none;">
+              </label>
+            </div>
+            <div id="ev_subiendo" style="display:none;margin-top:.5rem;font-size:12px;color:#2563eb;">⏳ Subiendo…</div>
+          </div>
+        </div>
+
+        <div style="padding:.9rem 1.5rem;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;">
+          <button onclick="cerrarEvidencia()" style="padding:.6rem 1.4rem;border:1px solid #cbd5e1;border-radius:8px;background:#f1f5f9;color:#334155;cursor:pointer;font-size:14px;font-weight:600;">Cerrar</button>
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>

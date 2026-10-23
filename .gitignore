@@ -1,0 +1,61 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+
+# Variables de entorno (NUNCA subir llaves a git).
+# Ojo: un patron coincide EXACTO. ".env" no tapa ".env.save" ni ".env.viejo",
+# por eso va el comodin. La plantilla sin secretos si se sube.
+.env
+.env.*
+!.env.example
+
+# Base de datos SQLite (datos locales)
+*.db
+*.db-journal
+prisma/dev.db
+prisma/dev.db-journal
+# ...y sus respaldos (dev.db.backup-*, dev.db.bak_*): son datos de clientes,
+# no codigo. Nunca van al repositorio.
+prisma/dev.db*
+
+# Sesion de WhatsApp (credenciales del login por QR).
+# El comodin cubre los respaldos tipo auth_session.bak_124340, que valen
+# lo mismo que la sesion original: con eso alguien entra a la cuenta.
+auth_session/
+auth_session*/
+auth_session.bak*
+
+# Secreto que firma las cookies de sesion del dashboard
+.session-secret
+
+# Candado que evita arrancar el bot dos veces
+.bot.lock
+
+# Memoria de que alertas de Zabbix ya se anunciaron. Es estado de ESTA
+# maquina: si viajara en el repo, el bot repetiria o se saltaria avisos.
+.zabbix-avisados.json
+
+# Logs
+logs/
+*.log
+
+# Sistema
+.DS_Store
+
+# Evidencia descargada de WhatsApp (fotos de los clientes).
+# OJO: respaldar esta carpeta junto con la base, o quedan tickets
+# apuntando a imágenes que ya no existen.
+uploads/
+.resumen-semanal.json
+# Memoria de los relojes (resumen diario, reporte mensual) y de qué
+# problemas repetidos ya se avisaron. Igual que .zabbix-avisados.json: es
+# estado de ESTA máquina; si viajara en el repo, la VM se saltaría envíos.
+.resumen-diario.json
+.reporte-mensual.json
+.repetidos-avisados.json
+# Mensajes que mandó el bot, para poder reenviarlos si alguien no los
+# pudo abrir ("Esperando el mensaje…"). Estado de esta máquina, y además
+# contenido de los avisos: no va al repositorio.
+.mensajes-enviados.json

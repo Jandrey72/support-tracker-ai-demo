@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support Tracker — Acceso</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 25px 60px rgba(0,0,0,.3);
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .logo .icon { font-size: 48px; }
+    .logo h1 { font-size: 22px; color: #1e293b; margin-top: 8px; font-weight: 700; }
+    .logo p { color: #64748b; font-size: 13px; margin-top: 4px; }
+
+    label { display: block; font-size: 13px; color: #475569; font-weight: 600; margin-bottom: 6px; }
+    input {
+      width: 100%;
+      padding: .75rem 1rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color .15s;
+      margin-bottom: 1rem;
+    }
+    input:focus { border-color: #2563eb; }
+
+    button {
+      width: 100%;
+      padding: .85rem;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      margin-top: .25rem;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #93c5fd; cursor: default; }
+
+    #error {
+      display: none;
+      background: #fee2e2;
+      color: #dc2626;
+      border-radius: 8px;
+      padding: .6rem 1rem;
+      font-size: 13px;
+      margin-top: .75rem;
+      text-align: center;
+    }
+    .footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="24" cy="24" r="24" fill="#0f172a"/>
+          <circle cx="24" cy="24" r="22" stroke="#2563eb" stroke-width="2" fill="none"/>
+          <text x="24" y="31" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="white">b</text>
+        </svg>
+        <div style="text-align:left;">
+          <div style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;">TIC<span style="color:#2563eb;">GLOBAL</span></div>
+          <div style="font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;">Servicios de TI</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#94a3b8;margin-top:4px;">Panel de soporte técnico</p>
+    </div>
+
+    <label for="user">Usuario</label>
+    <input id="user" type="text" placeholder="admin" autocomplete="username" />
+
+    <label for="pass">Contraseña</label>
+    <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')login()" />
+
+    <button id="btn" onclick="login()">Entrar</button>
+    <div id="error"></div>
+
+    <div class="footer">Mi Empresa &copy; 2024 · Servicios de TI</div>
+  </div>
+
+  <script>
+    async function login() {
+      const user = document.getElementById('user').value.trim();
+      const pass = document.getElementById('pass').value;
+      const btn = document.getElementById('btn');
+      const errEl = document.getElementById('error');
+
+      if (!user || !pass) {
+        errEl.textContent = 'Ingresa usuario y contraseña.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+      errEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user, pass }),
+        });
+        if (res.ok) {
+          window.location.replace('/');
+        } else {
+          const data = await res.json();
+          errEl.textContent = data.error || 'Credenciales incorrectas.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Entrar';
+        }
+      } catch {
+        errEl.textContent = 'Error de conexión. ¿Está corriendo el servidor?';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      }
+    }
+
+    // Si YA hay sesión iniciada, pasar directo al dashboard.
+    // (Se consulta /api/auth/me, que dice explícitamente si hay sesión;
+    //  usar un endpoint público cualquiera provocaba un bucle de redirección.)
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(d => {
+        if (d.authenticated) window.location.replace('/');
+        else document.getElementById('user').focus();
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

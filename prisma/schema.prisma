@@ -1,0 +1,249 @@
+// ============================================================
+//  Esquema de base de datos - Support Tracker AI
+//  Base actual: SQLite (archivo local). Para pasar a PostgreSQL,
+//  cambia "provider" a "postgresql" y ajusta DATABASE_URL en .env.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Grupo de WhatsApp que monitoreamos.
+model Group {
+  id        String   @id @default(cuid())
+  waId      String   @unique // JID del grupo en WhatsApp (ej: 12036...@g.us)
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages     Message[]
+  supportCases SupportCase[]
+}
+
+// Persona que envia mensajes (tecnico o cliente).
+model User {
+  id           String   @id @default(cuid())
+  waId         String   @unique // JID/numero del remitente
+  name         String?
+  isTechnician Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages Message[]
+}
+
+// Cada mensaje recibido en un grupo.
+model Message {
+  id         String   @id @default(cuid())
+  waId       String   @unique // id del mensaje en WhatsApp
+  content    String
+  type       String   @default("text") // text | image | video | audio | document
+  mediaUrl   String?
+  senderName String?
+  timestamp  DateTime
+  createdAt  DateTime @default(now())
+
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id])
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Un mensaje puede pertenecer a un caso de soporte.
+  supportCaseId String?
+  supportCase   SupportCase? @relation(fields: [supportCaseId], references: [id])
+
+  analysis AIAnalysis?
+
+  @@index([groupId])
+  @@index([timestamp])
+}
+
+// Categorias de soporte (Redes, Impresoras, Correo, etc.).
+model SupportCategory {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  supportCases SupportCase[]
+}
+
+// El registro central: un caso de soporte detectado.
+model SupportCase {
+  id         String    @id @default(cuid())
+  client     String? // nombre del cliente/empresa
+  technician String? // tecnico que atendio
+  summary    String // resumen de lo que se hizo
+  status     String    @default("open") // open | in_progress | completed
+  confidence Float     @default(0)
+  startedAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  deletedAt  DateTime?
+  site            String? // sitio(s) mencionados (ej. Planta Sur)
+  policy          String? // poliza(s) (ej. Acme, Acme Norte)
+  severity        String? // Alta | Media | Baja
+  interactionType String? // tipo (Soporte tecnico, Incidente...)
+  externalId      String? @unique // id original OP-SUP-xxxx (para no duplicar al importar)
+  source          String  @default("whatsapp")
+  ticketNumber    String? @unique // TKT-0042 (la BD rechaza duplicados)
+  resolutionNote  String?
+
+  /// Técnico RESPONSABLE del ticket. La IA nunca lo cambia: se asigna
+  /// automáticamente al crearlo o a mano desde el dashboard.
+  /// Distinto de `technician`, que es quien actuó por última vez.
+  assignedTo      String?
+
+  /// Cuándo lo editó una persona desde el dashboard. Si tiene fecha,
+  /// la IA deja de sobrescribir sus campos (solo sigue ligando mensajes).
+  manualEditAt    DateTime?
+
+  /// Código secreto para la página pública de estado (/estado/<código>).
+  /// Vacío = el ticket no tiene link público. Se crea A MANO desde el
+  /// dashboard y se puede revocar: nunca se manda solo al cliente.
+  /// Índice (no @unique) a propósito: @unique hace que `db push` pida
+  /// --accept-data-loss y el script de la VM se detendría. 24 bytes al azar
+  /// no se repiten en la práctica.
+  publicToken     String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id])
+
+  categoryId String?
+  category   SupportCategory? @relation(fields: [categoryId], references: [id])
+
+  messages  Message[]
+  analyses  AIAnalysis[]
+  comments  TicketComment[]
+  evidencias Evidence[]
+  avisos     BotMessage[]
+
+  @@index([status])
+  @@index([technician])
+  @@index([assignedTo])
+  @@index([createdAt])
+  @@index([publicToken])
+}
+
+// Mensajes que el BOT publicó sobre un ticket (el aviso del grupo interno y
+// los privados de asignación). Guardamos su domicilio en WhatsApp para poder
+// borrarlos si se borra el ticket.
+model BotMessage {
+  id          String   @id @default(cuid())
+  /// Chat donde se publicó (grupo o privado del técnico).
+  jid         String
+  /// Id del mensaje EN WHATSAPP (no el nuestro). Con esto se borra.
+  waMessageId String
+  /// "grupo" | "privado" — solo para explicar en el log y en la UI.
+  kind        String
+  /// A quién iba dirigido, para poder decir "se borró el aviso de Luis".
+  destino     String?
+  createdAt   DateTime @default(now())
+
+  supportCaseId String
+  supportCase   SupportCase @relation(fields: [supportCaseId], references: [id], onDelete: Cascade)
+
+  @@index([supportCaseId])
+}
+
+// Capturas de pantalla y archivos que se suben A MANO desde el dashboard.
+// Distinto de Message.mediaUrl, que son las fotos que llegaron por WhatsApp:
+// aquellas cuelgan del mensaje (conservan quién y cuándo), estas del ticket.
+model Evidence {
+  id         String   @id @default(cuid())
+  /// Nombre con el que llegó, SOLO para mostrar. Nunca se usa como ruta.
+  fileName   String
+  /// Ruta relativa dentro de uploads/. El nombre real lo generamos nosotros.
+  storedPath String
+  mimeType   String
+  size       Int
+  /// Quién la subió (usuario del dashboard).
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  supportCaseId String
+  supportCase   SupportCase @relation(fields: [supportCaseId], references: [id], onDelete: Cascade)
+
+  @@index([supportCaseId])
+}
+
+// Comentarios/notas adicionales sobre un ticket.
+model TicketComment {
+  id        String   @id @default(cuid())
+  content   String
+  author    String?
+  createdAt DateTime @default(now())
+
+  supportCaseId String
+  supportCase   SupportCase @relation(fields: [supportCaseId], references: [id], onDelete: Cascade)
+
+  @@index([supportCaseId])
+}
+
+// Registro de cada analisis que hizo la IA (auditoria y trazabilidad).
+model AIAnalysis {
+  id          String   @id @default(cuid())
+  provider    String // claude | openai | gemini | deepseek
+  model       String?
+  isSupport   Boolean
+  confidence  Float
+  rawResponse String // JSON crudo devuelto por la IA
+  createdAt   DateTime @default(now())
+
+  messageId String  @unique
+  message   Message @relation(fields: [messageId], references: [id])
+
+  supportCaseId String?
+  supportCase   SupportCase? @relation(fields: [supportCaseId], references: [id])
+}
+
+// Una factura (para la vista de Pagos).
+model Invoice {
+  id           String    @id @default(cuid())
+  folio        String    @unique  // no se repite
+  servicio     String?
+  poliza       String?
+  mes          String?   // "mar-2025"
+  mkey         String?   // "2025-03" (para ordenar)
+  importe      Float     @default(0)
+  fechaFactura DateTime?
+  fechaPago    DateTime?
+  dias         Int?      // días que tardó el pago
+  estado       String?   // pagada | pendiente
+  enPlazo      Boolean   @default(false)
+  evidencia    String?
+  createdAt    DateTime  @default(now())
+}
+
+// Disponibilidad de cada tecnico: si salio a sitio, no le caen tickets.
+// Vive en la base (no en memoria) para que sobreviva a un reinicio del bot:
+// si alguien sale el viernes, el lunes sigue marcado como ausente.
+model TechnicianStatus {
+  // El nombre tal como esta en config/technicians.ts (es la llave).
+  name       String   @id
+  disponible Boolean  @default(true)
+  motivo     String? // lo que escribio al salir: "a sitio en Demo"
+  desde      DateTime @default(now()) // cuando cambio de estado
+  // Ultimo recordatorio "sigues ausente" que se le mando, para no repetirlo.
+  avisadoAt  DateTime?
+  updatedAt  DateTime @updatedAt
+}
+
+
+// Equivalencia entre el identificador nuevo de WhatsApp (@lid) y el numero real.
+//
+// En los GRUPOS llegan los dos datos juntos (participant = @lid, participantPn =
+// numero), pero en un chat PRIVADO solo llega el @lid y no hay forma de deducir
+// el numero. Aqui apuntamos la pareja cada vez que alguien escribe en un grupo,
+// y asi podemos reconocerlo despues por privado.
+model LidMap {
+  lid       String   @id // ej. 123456789@lid
+  numero    String // 10 digitos
+  name      String?
+  updatedAt DateTime @updatedAt
+}

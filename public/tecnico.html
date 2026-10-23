@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vista por técnico — Support Tracker</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f1f5f9; color: #0f172a; padding: 24px;
+      }
+      @media (max-width: 600px) { body { padding: 16px; } }
+      header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+      h1 { font-size: 18px; font-weight: 900; }
+      h1 span { color: #2563eb; }
+      .sub { color: #64748b; font-size: 13px; margin-top: 2px; }
+      a.volver, select {
+        padding: 7px 14px; border-radius: 20px; border: 1px solid #cbd5e1; background: #fff;
+        color: #475569; font-size: 13px; text-decoration: none;
+      }
+      select { font-size: 15px; font-weight: 600; color: #0f172a; cursor: pointer; }
+
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+      .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+      .card .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .card .label { color: #64748b; font-size: 12px; margin-top: 4px; }
+      .c-pend .num { color: #f59e0b; } .c-venc .num { color: #dc2626; }
+      .c-mes .num { color: #2563eb; } .c-ok .num { color: #16a34a; } .c-tiempo .num { color: #0891b2; font-size: 22px; }
+
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+      @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+      .panel { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); min-width: 0; }
+      .panel h2 { font-size: 15px; color: #334155; margin-bottom: 12px; }
+      .panel.full { margin-bottom: 16px; }
+
+      .item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+      .item:last-child { border-bottom: none; }
+      .tkt { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .item .txt { flex: 1; min-width: 0; }
+      .item .meta { color: #94a3b8; font-size: 12px; margin-top: 2px; }
+      .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+      .t-venc { background: #fee2e2; color: #b91c1c; } .t-open { background: #fef3c7; color: #92400e; }
+      .t-prog { background: #ede9fe; color: #5b21b6; } .t-ok { background: #dcfce7; color: #166534; }
+
+      .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+      .bar-row .name { width: 130px; color: #475569; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .bar-track { flex: 1; background: #e2e8f0; border-radius: 6px; height: 16px; overflow: hidden; }
+      .bar-fill { background: #2563eb; height: 100%; border-radius: 6px; }
+      .bar-row .cnt { width: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+      .meses { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding-top: 10px; }
+      .mes { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+      .mes .col { width: 100%; max-width: 44px; background: #bfdbfe; border-radius: 6px 6px 0 0; position: relative; }
+      .mes .col .dentro { position: absolute; bottom: 0; left: 0; right: 0; background: #2563eb; border-radius: 6px 6px 0 0; }
+      .mes .n { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .mes .m { font-size: 11px; color: #64748b; }
+      .leyenda { font-size: 11px; color: #64748b; margin-top: 8px; display: flex; gap: 14px; }
+      .leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+
+      .empty { color: #94a3b8; font-size: 13px; text-align: center; padding: 24px; }
+      .cv { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; border-radius: 12px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; }
+      #error { display: none; background: #fee2e2; color: #b91c1c; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>TIC<span>GLOBAL</span> · Vista por técnico</h1>
+        <div class="sub">Lo pendiente de cada quien y cómo va el mes</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select id="quien" aria-label="Técnico"></select>
+        <a class="volver" href="/">← Dashboard</a>
+      </div>
+    </header>
+
+    <div id="error"></div>
+    <div class="cards" id="cards"></div>
+    <div class="cv" id="cv" style="display:none;"></div>
+
+    <div class="panel full">
+      <h2>📌 Pendientes <span style="font-weight:400;color:#94a3b8;font-size:12px;">(lo vencido primero)</span></h2>
+      <div id="pendientes"></div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>📈 Últimos 6 meses</h2>
+        <div id="meses"></div>
+      </div>
+      <div class="panel">
+        <h2>🏢 Este mes, por cliente</h2>
+        <div id="porEmpresa"></div>
+      </div>
+      <div class="panel">
+        <h2>🏷️ Este mes, por tipo</h2>
+        <div id="porCategoria"></div>
+      </div>
+      <div class="panel">
+        <h2>✅ Últimos cerrados</h2>
+        <div id="cerrados"></div>
+      </div>
+    </div>
+
+    <script>
+      function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+      }
+
+      async function api(url) {
+        const res = await fetch(url);
+        if (res.status === 401) { window.location.replace('/login.html'); throw new Error('sesion'); }
+        if (!res.ok) {
+          let msg = 'Error del servidor (' + res.status + ')';
+          try { const d = await res.json(); if (d.error) msg = d.error; } catch {}
+          throw new Error(msg);
+        }
+        return res.json();
+      }
+
+      function duracion(min) {
+        if (min == null) return '—';
+        if (min < 60) return min + ' min';
+        if (min < 1440) return (min / 60).toFixed(1) + ' h';
+        return (min / 1440).toFixed(1) + ' días';
+      }
+
+      function hace(fecha) {
+        const h = Math.floor((Date.now() - new Date(fecha).getTime()) / 3600000);
+        return h < 48 ? `hace ${h} h` : `hace ${Math.floor(h / 24)} días`;
+      }
+
+      function barras(lista, color) {
+        if (!lista.length) return '<div class="empty">Nada este mes todavía</div>';
+        const max = Math.max(...lista.map((x) => x.total));
+        return lista.map((x) => `
+          <div class="bar-row">
+            <div class="name" title="${esc(x.nombre)}">${esc(x.nombre)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(x.total / max) * 100}%;background:${color}"></div></div>
+            <div class="cnt">${x.total}</div>
+          </div>`).join('');
+      }
+
+      function etiqueta(c) {
+        if (c.vencido) return '<span class="tag t-venc">⚠️ Vencido</span>';
+        if (c.status === 'in_progress') return '<span class="tag t-prog">En progreso</span>';
+        return '<span class="tag t-open">Abierto</span>';
+      }
+
+      function pintar(v) {
+        const cards = [
+          ['c-pend', v.pendientes.length, 'Pendientes'],
+          ['c-venc', v.vencidos, 'Fuera de tiempo'],
+          ['c-mes', v.mes.total, 'Atendidos este mes'],
+          ['c-ok', v.mes.cerrados, 'Cerrados este mes'],
+          ['c-tiempo', duracion(v.mes.promedioMin), 'Tiempo promedio'],
+        ];
+        document.getElementById('cards').innerHTML = cards.map(([cls, n, l]) =>
+          `<div class="card ${cls}"><div class="num">${n}</div><div class="label">${l}</div></div>`).join('');
+
+        // El histórico en una frase: números reales de su trabajo, sirven para un CV.
+        const cv = document.getElementById('cv');
+        if (v.historico.total) {
+          cv.style.display = 'block';
+          cv.innerHTML = `💼 <b>${esc(v.nombre)}</b> ha atendido <b>${v.historico.total}</b> soportes registrados` +
+            ` y cerrado <b>${v.historico.cerrados}</b>. Números reales de tu trabajo: sirven para tu CV.`;
+        } else {
+          cv.style.display = 'none';
+        }
+
+        document.getElementById('pendientes').innerHTML = v.pendientes.length
+          ? v.pendientes.map((c) => `
+            <div class="item">
+              <div class="tkt">${esc(c.ticketNumber || 's/n')}</div>
+              <div class="txt">${esc(c.summary)}
+                <div class="meta">${esc(c.empresa)} · ${esc(c.categoria)} · ${hace(c.createdAt)}${c.severity === 'Alta' ? ' · 🔥 Alta' : ''}</div>
+              </div>
+              ${etiqueta(c)}
+            </div>`).join('')
+          : '<div class="empty">✅ Nada pendiente. ¡Al día!</div>';
+
+        const max = Math.max(1, ...v.porMes.map((m) => m.total));
+        document.getElementById('meses').innerHTML =
+          '<div class="meses">' + v.porMes.map((m) => `
+            <div class="mes" title="${m.total} atendidos, ${m.cerrados} cerrados">
+              <div class="n">${m.total}</div>
+              <div class="col" style="height:${Math.max(2, (m.total / max) * 100)}%">
+                <div class="dentro" style="height:${m.total ? (m.cerrados / m.total) * 100 : 0}%"></div>
+              </div>
+              <div class="m">${esc(m.mes)}</div>
+            </div>`).join('') + '</div>' +
+          '<div class="leyenda"><span><i style="background:#2563eb"></i>Cerrados</span><span><i style="background:#bfdbfe"></i>Atendidos</span></div>';
+
+        document.getElementById('porEmpresa').innerHTML = barras(v.mes.porEmpresa, '#2563eb');
+        document.getElementById('porCategoria').innerHTML = barras(v.mes.porCategoria, '#0891b2');
+
+        document.getElementById('cerrados').innerHTML = v.ultimosCerrados.length
+          ? v.ultimosCerrados.map((c) => `
+            <div class="item">
+              <div class="tkt">${esc(c.ticketNumber || 's/n')}</div>
+              <div class="txt">${esc(c.summary)}<div class="meta">${esc(c.empresa)} · ${new Date(c.resolvedAt || c.createdAt).toLocaleDateString('es-MX')}</div></div>
+            </div>`).join('')
+          : '<div class="empty">Aún no hay cerrados</div>';
+      }
+
+      async function cargar() {
+        const nombre = document.getElementById('quien').value;
+        if (!nombre) return;
+        try { localStorage.setItem('vistaTecnico', nombre); } catch {}
+        const url = new URL(location.href);
+        url.searchParams.set('quien', nombre);
+        history.replaceState(null, '', url);
+        try {
+          pintar(await api('/api/tecnicos/' + encodeURIComponent(nombre) + '/vista'));
+          document.getElementById('error').style.display = 'none';
+        } catch (e) {
+          const el = document.getElementById('error');
+          el.textContent = '⚠️ ' + e.message;
+          el.style.display = 'block';
+        }
+      }
+
+      (async function iniciar() {
+        const sel = document.getElementById('quien');
+        const equipo = await api('/api/equipo');
+        sel.innerHTML = equipo.map((t) => `<option>${esc(t.name)}</option>`).join('');
+        let guardado = null;
+        try { guardado = localStorage.getItem('vistaTecnico'); } catch {}
+        const pedido = new URLSearchParams(location.search).get('quien') || guardado;
+        if (pedido && equipo.some((t) => t.name === pedido)) sel.value = pedido;
+        sel.addEventListener('change', cargar);
+        cargar();
+        // Se refresca solo cada minuto si la pestaña está visible.
+        setInterval(() => { if (!document.hidden) cargar(); }, 60000);
+      })().catch((e) => {
+        const el = document.getElementById('error');
+        el.textContent = '⚠️ ' + e.message;
+        el.style.display = 'block';
+      });
+    </script>
+  </body>
+</html>
